@@ -9,6 +9,7 @@ def leaky_relu(x, a=0.3):
         raise ValueError('LeakyReLU: alpha must be between 0 and 1')
     return np.maximum(x, a * x)
 
+
 def softmax(x):
     '''
     Numerically more stable implementation of
