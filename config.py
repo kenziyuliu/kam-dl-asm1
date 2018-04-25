@@ -33,3 +33,4 @@ gradient = lossfunction.backward()
 
 for layer in reversed(sample_model):
     gradient = layer.backward(gradient)
+

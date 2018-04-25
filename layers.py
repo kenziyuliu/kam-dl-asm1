@@ -114,7 +114,7 @@ class Dropout:
 
     def backward(self, backproped_grad):
         deriv = backproped_grad * self.mask / self.rate # / rate so no change for prediction
-
+        
 
 if __name__ == '__main__':
     """
@@ -141,5 +141,3 @@ if __name__ == '__main__':
     x = np.arange(30).reshape(5, 6)
     print(x)
     print(Dropout(0.5).forward(x))
-
-
