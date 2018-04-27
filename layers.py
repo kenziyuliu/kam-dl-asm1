@@ -1,4 +1,5 @@
 import numpy as np
+from initializers import *
 
 """
 TODO layers:
@@ -10,10 +11,19 @@ NOTE:
 """
 
 class FullyConnected:
-    def __init__(self, input_dim, output_dim, weight_initializer, use_bias=False):
-        self.W_shape = (input_dim, output_dim)
-        self.W = weight_initializer(self.W_shape)
-        self.dW = None
+    def __init__(self, input_dim, output_dim, weight_initializer, use_bias=False, weight_norm=False):
+        if weight_norm:
+
+
+
+
+
+
+
+        else:
+            self.W_shape = (output_dim, input_dim)
+            self.W = weight_initializer(self.W_shape)
+            self.dW = None
         self.b = np.zeros(output_dim) if use_bias else None
         self.db = None
         self.input = None
@@ -130,17 +140,14 @@ class Dropout:
         ''' backproped_grad.shape = (batch x input_dims) '''
         deriv = backproped_grad * self.mask / self.rate # divide rate so no change for prediction
 
-        
-def get_accuracy(y_pred, y_true):
-    return np.mean(np.equal(np.argmax(y_true, axis=-1), np.argmax(y_pred, axis=-1)))
-
 
 if __name__ == '__main__':
     """
     Test cases
     """
     print('relu and leaky relu:')
-    values = np.random.rand(4,5) - .5
+    values = xavier_uniform_init(shape=(4,5))
+    # values = np.random.rand(4,5) - .5
     print('value:\n', values)
     print('relu:\n', ReLU().forward(values))
     print('leakyrelu:\n', LeakyReLU(.1).forward(values))
@@ -160,5 +167,3 @@ if __name__ == '__main__':
     x = np.arange(30).reshape(5, 6)
     print(x)
     print(Dropout(0.5).forward(x))
-
-
