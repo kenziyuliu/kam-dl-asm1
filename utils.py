@@ -1,5 +1,5 @@
 import numpy as np
-import config
+# import config
 
 
 def shuffle_together(a, b):
@@ -41,6 +41,21 @@ def whitening(data):
     return data
 
 
+def get_accuracy(y_pred, y_true):
+    return np.mean(np.equal(np.argmax(y_true, axis=-1), np.argmax(y_pred, axis=-1)))
+
+
+def weight_norm_compute_weight(g, v):
+    # g: (output_dim,)
+    # v: (input_dim, output_dim)
+
+    # in case v is all zero/ too small, division by 0 will cause error
+    v_length = np.sum(np.square(v), axis=0) # shape: (input_dim,)
+    np.putmask(v_length, v_length < 1e-12, 1e-12)
+
+    return g * v / v_length # tested correct
+
+
 if __name__ == '__main__':
     """
     Test cases
@@ -60,4 +75,3 @@ if __name__ == '__main__':
     data = np.random.randint(0,10, (3,3))
     print(data)
     print(whitening(data))
-

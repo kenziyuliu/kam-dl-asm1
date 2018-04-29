@@ -1,5 +1,6 @@
 import numpy as np
 from initializers import *
+from utils import *
 
 """
 TODO layers:
@@ -13,20 +14,25 @@ NOTE:
 class FullyConnected:
     def __init__(self, input_dim, output_dim, weight_initializer, use_bias=False, weight_norm=False):
         if weight_norm:
+            # weight vector: length output_dim, there are input_dim number of it
+            self.v_shape = (input_dim, output_dim)
+            self.g_shape = (output_dim,)
 
+            self.v = weight_initializer(self.v_shape)
+            self.g = np.linalg.norm(self.v, axis=0)
 
-
-
-
-
+            self.dv = None
+            self.dg = None
 
         else:
-            self.W_shape = (output_dim, input_dim)
+            self.W_shape = (input_dim, output_dim)
             self.W = weight_initializer(self.W_shape)
             self.dW = None
+
         self.b = np.zeros(output_dim) if use_bias else None
         self.db = None
         self.input = None
+        self.weight_norm = weight_norm
 
     def forward(self, input):
         '''
@@ -34,7 +40,8 @@ class FullyConnected:
         input.shape = (batch x self.input_dim), output.shape = (batch x self.output_dim)
         '''
         self.input = input
-        return np.matmul(input, self.weights) + (0 if self.b is None else self.b)
+        w = weight_norm_compute_weight(self.g, self.v) if self.weight_norm else self.W
+        return np.matmul(input, w) + (0 if self.b is None else self.b)
 
     def backward(self, backproped_grad):
         '''
@@ -42,11 +49,27 @@ class FullyConnected:
         This function saves dW and returns d(Loss)/d(input)
         backproped_grad.shape = (batch x self.output_dim), output.shape = (batch x self.input_dim)
         '''
-        self.dW = np.matmul(self.input.T, backproped_grad)
+        if self.weight_norm:
+            # self.g_shape: (output_dim,)
+            # self.v_shape: (input_dim, output_dim)
+
+            v_length = np.sum(np.square(self.v), axis=0) # shape: (input_dim,)
+            np.putmask(v_length, v_length < 1e-12, 1e-12)
+
+            dw = np.matmul(self.input.T, backproped_grad) # (input_dim, output_dim)
+            self.dg = np.average(np.multiply((self.v / v_length), dw), axis=0) # (output_dim,)
+            # NOTE: average along axis at the moment, may change to sum later
+
+            self.dv = self.g[None,:] * (dw / v_length[None,:] - self.v / np.square(v_length)[None,:] * self.dg[None,:])
+
+        else:
+            self.dW = np.matmul(self.input.T, backproped_grad)
+
         # As bias was broadcast during forward, now take the average of backproped grad along *batch size*
-        self.db = np.average(backproped_grad, axis=0) if self.b is not None else 0
-        dinput = np.matmul(backproped_grad, self.W.T)
-        return dinput
+        self.db = np.average
+
+        dinput = np.matmul(backproped_grad, self.W.T if not self.weight_norm else weight_norm_compute_weight(self.g, self.v).T)
+        return dinput # batch x input_dim
 
     # NOTE: needs change
     def update(self, change):
@@ -145,12 +168,25 @@ if __name__ == '__main__':
     """
     Test cases
     """
-    print('relu and leaky relu:')
-    values = xavier_uniform_init(shape=(4,5))
-    # values = np.random.rand(4,5) - .5
-    print('value:\n', values)
-    print('relu:\n', ReLU().forward(values))
-    print('leakyrelu:\n', LeakyReLU(.1).forward(values))
+    # print('relu and leaky relu:')
+    input_val = np.random.randn(1,2)
+    print('input_val:\n',input_val)
+
+    grad_val = np.random.randn(1,3)
+    print('grad_val:\n',grad_val)
+
+    FC = FullyConnected(2,3,xavier_normal_init,weight_norm=True)
+    FC_weight = weight_norm_compute_weight(FC.g, FC.v)
+    # FC_weight = FC.W
+    print('FC_weight:\n', FC_weight)
+    print('FC_forward:\n', FC.forward(input_val))
+    print('FC backward:\n',FC.backward(grad_val))
+    print('FC.dv\n',FC.dv)
+    print('FC.dg\n',FC.dg)
+
+    # print('FC_length\n',np.linalg.norm(FC_weight.W, axis=0))
+    print('relu:\n', ReLU().forward(input_val))
+    print('leakyrelu:\n', LeakyReLU(.1).forward(input_val))
     print()
     print('Softmax:')
     x = np.expand_dims(np.array([1,1,1,2], dtype='float64'), axis=0)  # Mock the batch dimension
