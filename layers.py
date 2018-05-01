@@ -1,6 +1,7 @@
 import numpy as np
 from initializers import *
 from utils import *
+import config
 
 """
 TODO layers:
@@ -12,8 +13,8 @@ NOTE:
 """
 
 class FullyConnected:
-    def __init__(self, input_dim, output_dim, weight_initializer, use_bias=False, weight_norm=False):
-        if weight_norm:
+    def __init__(self, input_dim, output_dim, weight_initializer, use_bias=False, use_weight_norm=False):
+        if use_weight_norm:
             # weight vector: length output_dim, there are input_dim number of it
             self.v_shape = (input_dim, output_dim)
             self.g_shape = (output_dim,)
@@ -29,10 +30,18 @@ class FullyConnected:
             self.W = weight_initializer(self.W_shape)
             self.dW = None
 
-        self.b = np.zeros(output_dim) if use_bias else None
-        self.db = None
         self.input = None
-        self.weight_norm = weight_norm
+        self.b = np.zeros(output_dim)
+        self.db = None
+        self.use_bias = use_bias
+        self.use_weight_norm = use_weight_norm
+
+    def get_weight(self):
+        if self.use_weight_norm:
+            v_norm = np.linalg.norm(self.v, axis=0)
+            return self.g * self.v / np.maximum(v_norm, config.EPSILON)
+        else:
+            return self.W
 
     def forward(self, input):
         '''
@@ -40,8 +49,8 @@ class FullyConnected:
         input.shape = (batch x self.input_dim), output.shape = (batch x self.output_dim)
         '''
         self.input = input
-        w = weight_norm_compute_weight(self.g, self.v) if self.weight_norm else self.W
-        return np.matmul(input, w) + (0 if self.b is None else self.b)
+        w = self.get_weight()
+        return np.matmul(input, w) + (self.b if self.use_bias else 0)
 
     def backward(self, backproped_grad):
         '''
@@ -49,26 +58,22 @@ class FullyConnected:
         This function saves dW and returns d(Loss)/d(input)
         backproped_grad.shape = (batch x self.output_dim), output.shape = (batch x self.input_dim)
         '''
-        if self.weight_norm:
+        dweights = np.matmul(self.input.T, backproped_grad) # (input_dim, output_dim)
+        if self.use_weight_norm:
             # self.g_shape: (output_dim,)
             # self.v_shape: (input_dim, output_dim)
-
-            v_length = np.sum(np.square(self.v), axis=0) # shape: (input_dim,)
-            np.putmask(v_length, v_length < 1e-12, 1e-12)
-
-            dw = np.matmul(self.input.T, backproped_grad) # (input_dim, output_dim)
-            self.dg = np.average(np.multiply((self.v / v_length), dw), axis=0) # (output_dim,)
+            v_norm = np.maximum(np.linalg.norm(v, axis=0), config.EPSILON)  # Clip for numerical stability
             # NOTE: average along axis at the moment, may change to sum later
-
-            self.dv = self.g[None,:] * (dw / v_length[None,:] - self.v / np.square(v_length)[None,:] * self.dg[None,:])
-
+            self.dg = np.sum(dweights * self.v / v_norm, axis=0)
+            self.dv = (self.g / v_norm * dweights) - (self.g * self.dg / np.square(v_norm) * self.v)
         else:
-            self.dW = np.matmul(self.input.T, backproped_grad)
+            self.dW = dweights
 
         # As bias was broadcast during forward, now take the average of backproped grad along *batch size*
-        self.db = np.average
+        if self.use_bias:
+            self.db = np.sum(backproped_grad, axis=0)
 
-        dinput = np.matmul(backproped_grad, self.W.T if not self.weight_norm else weight_norm_compute_weight(self.g, self.v).T)
+        dinput = np.matmul(backproped_grad, self.get_weight().T)
         return dinput # batch x input_dim
 
     # NOTE: needs change
@@ -175,8 +180,8 @@ if __name__ == '__main__':
     grad_val = np.random.randn(1,3)
     print('grad_val:\n',grad_val)
 
-    FC = FullyConnected(2,3,xavier_normal_init,weight_norm=True)
-    FC_weight = weight_norm_compute_weight(FC.g, FC.v)
+    FC = FullyConnected(2,3,xavier_normal_init,use_weight_norm=True)
+    FC_weight = FC.get_weight()
     # FC_weight = FC.W
     print('FC_weight:\n', FC_weight)
     print('FC_forward:\n', FC.forward(input_val))
