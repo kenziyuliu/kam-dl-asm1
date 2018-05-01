@@ -58,23 +58,20 @@ class FullyConnected:
         This function saves dW and returns d(Loss)/d(input)
         backproped_grad.shape = (batch x self.output_dim), output.shape = (batch x self.input_dim)
         '''
-        dweights = np.matmul(self.input.T, backproped_grad) # (input_dim, output_dim)
+        dweights = np.matmul(self.input.T, backproped_grad)                 # shape = (input_dim, output_dim)
         if self.use_weight_norm:
-            # self.g_shape: (output_dim,)
-            # self.v_shape: (input_dim, output_dim)
             v_norm = np.maximum(np.linalg.norm(v, axis=0), config.EPSILON)  # Clip for numerical stability
-            # NOTE: average along axis at the moment, may change to sum later
-            self.dg = np.sum(dweights * self.v / v_norm, axis=0)
+            self.dg = np.sum(dweights * self.v / v_norm, axis=0)            # Sum gradient since g was broadcasted
             self.dv = (self.g / v_norm * dweights) - (self.g * self.dg / np.square(v_norm) * self.v)
         else:
             self.dW = dweights
 
-        # As bias was broadcast during forward, now take the average of backproped grad along *batch size*
         if self.use_bias:
+            # Sum gradient since bias was broadcasted
             self.db = np.sum(backproped_grad, axis=0)
 
-        dinput = np.matmul(backproped_grad, self.get_weight().T)
-        return dinput # batch x input_dim
+        dinput = np.matmul(backproped_grad, self.get_weight().T)            # shape = (batch, input_dim)
+        return dinput
 
     # NOTE: needs change
     def update(self, change):
