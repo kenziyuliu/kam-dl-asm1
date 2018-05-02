@@ -205,13 +205,17 @@ class BatchNorm:
         self.optimizer.init_shape(shape_list)
 
 
-    def forward(self, input):
-        self.variance = np.sqrt(np.var(input, axis=0) + self.epsilon)
-        mean = np.mean(input, axis=0)
-        self.input_hat = (input - mean) / self.variance
-        self.running_avg_mean = self.momentum * self.running_avg_mean + (1 - self.momentum) * mean
-        self.running_avg_variance = self.momentum * self.running_avg_variance + (1 - self.momentum) * self.variance
-        return self.gamma * self.input_hat + self.beta
+    def forward(self, input, is_training=True):
+        if is_training:
+            self.variance = np.sqrt(np.var(input, axis=0) + self.epsilon)
+            mean = np.mean(input, axis=0)
+            self.input_hat = (input - mean) / self.variance
+            self.running_avg_mean = self.momentum * self.running_avg_mean + (1 - self.momentum) * mean
+            self.running_avg_variance = self.momentum * self.running_avg_variance + (1 - self.momentum) * self.variance
+            return self.gamma * self.input_hat + self.beta
+        else:
+            input_hat = (input - self.running_avg_mean) / self.running_avg_variance
+            return self.gamma * input_hat + self.beta
 
     def backward(self, backproped_grad):
         d_xhat = backproped_grad * self.gamma
