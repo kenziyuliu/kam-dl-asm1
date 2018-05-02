@@ -187,7 +187,7 @@ class Dropout:
 
 
 class BatchNorm:
-    def __init__(self, input_dim, momentum = 0.9, epsilon = 1e-3, optimizer=get_optimizer(config.OPT)):
+    def __init__(self, input_dim, momentum = 0.9, epsilon = 1e-3, optimizer_type=config.OPT):
         self.gamma = np.ones(input_dim[1])
         self.beta = np.zeros(input_dim[1])
         self.running_avg_mean = np.zeros(input_dim[1])
@@ -199,7 +199,7 @@ class BatchNorm:
         self.d_beta = None
         self.input_dim = input_dim
         self.variance = None
-        self.optimizer = optimizer
+        self.optimizer = get_optimizer(optimizer_type)
 
         shape_list = [self.gamma.shape, self.beta.shape]
         self.optimizer.init_shape(shape_list)
