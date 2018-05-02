@@ -205,8 +205,8 @@ class BatchNorm:
         self.optimizer.init_shape(shape_list)
 
 
-    def forward(self, input, is_training=True):
-        if is_training:
+    def forward(self, input, training=True):
+        if training:
             self.variance = np.sqrt(np.var(input, axis=0) + self.epsilon)
             mean = np.mean(input, axis=0)
             self.input_hat = (input - mean) / self.variance
