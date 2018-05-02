@@ -191,14 +191,14 @@ class BatchNorm:
         self.gamma = np.ones(input_dim[1])
         self.beta = np.zeros(input_dim[1])
         self.running_avg_mean = np.zeros(input_dim[1])
-        self.running_avg_variance = np.zeros(input_dim[1])
+        self.running_avg_std = np.zeros(input_dim[1])
         self.momentum =  momentum
         self.epsilon = epsilon
         self.input_hat = None
         self.d_gamma = None
         self.d_beta = None
         self.input_dim = input_dim
-        self.variance = None
+        self.std = None
         self.optimizer = get_optimizer(optimizer_type)
 
         shape_list = [self.gamma.shape, self.beta.shape]
@@ -207,26 +207,26 @@ class BatchNorm:
 
     def forward(self, input, training=True):
         if training:
-            self.variance = np.sqrt(np.var(input, axis=0) + self.epsilon)
+            self.std = np.sqrt(np.var(input, axis=0) + self.epsilon)
             mean = np.mean(input, axis=0)
-            self.input_hat = (input - mean) / self.variance
+            self.input_hat = (input - mean) / self.std
             self.running_avg_mean = self.momentum * self.running_avg_mean + (1 - self.momentum) * mean
-            self.running_avg_variance = self.momentum * self.running_avg_variance + (1 - self.momentum) * self.variance
+            self.running_avg_std = self.momentum * self.running_avg_std + (1 - self.momentum) * self.std
             return self.gamma * self.input_hat + self.beta
         else:
-            input_hat = (input - self.running_avg_mean) / self.running_avg_variance
+            input_hat = (input - self.running_avg_mean) / self.running_avg_std
             return self.gamma * input_hat + self.beta
 
     def backward(self, backproped_grad):
         d_xhat = backproped_grad * self.gamma
-        dx = (1. / self.input_dim[0]) * (self.input_dim[0] * d_xhat - np.sum(d_xhat, axis=0)) / self.variance - self.input_hat * np.sum(d_xhat * self.input_hat, axis=0)
+        dx = (1. / self.input_dim[0]) * (self.input_dim[0] * d_xhat - np.sum(d_xhat, axis=0)) / self.std - self.input_hat * np.sum(d_xhat * self.input_hat, axis=0)
         self.d_gamma = np.sum(backproped_grad * self.input_hat, axis=0)
         self.d_beta = np.sum(backproped_grad, axis=0)
         return dx
 
     def update(self):
-        self.params_gradient = [(self.gamma, self.d_gamma), (self.beta, self.d_beta)]
-        self.optimizer.optimize(self.params_gradient)
+        params_gradient = [(self.gamma, self.d_gamma), (self.beta, self.d_beta)]
+        self.optimizer.optimize(params_gradient)
 
 
 
