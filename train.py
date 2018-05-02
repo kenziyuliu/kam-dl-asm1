@@ -1,7 +1,7 @@
 import h5py
 import numpy as np
 import utils
-from layers import FullyConnected, LeakyReLU, Softmax, CrossEntropyLoss
+from layers import FullyConnected, ReLU, LeakyReLU, Softmax, CrossEntropyLoss
 import initializers
 import config
 import time
@@ -18,9 +18,9 @@ import time
 # ]
 
 model = [
-    FullyConnected(config.INPUT_DIM, config.NUM_CLASSES, initializers.random_uniform_init),
+    FullyConnected(config.INPUT_DIM, 64, initializers.xavier_uniform_init, use_bias=True),
     # LeakyReLU(),
-    # FullyConnected(64, config.NUM_CLASSES, initializers.random_uniform_init),
+    FullyConnected(64, config.NUM_CLASSES, initializers.xavier_uniform_init),
     Softmax()
 ]
 
@@ -39,6 +39,8 @@ def go_through_batches(num_batches, training):
 
     x_data = X_train if training else X_test
     y_data = y_train if training else y_test
+
+    utils.shuffle_together(x_data, y_data)
 
     for idx in range(num_batches):
         start_idx = config.BATCH_SIZE * idx
@@ -59,7 +61,7 @@ def go_through_batches(num_batches, training):
             for layer in model:
                 layer.update() # call layer's own optimizer to make update
 
-        total_loss += np.sum(loss)
+        total_loss += np.mean(loss)
         batch_acc += utils.get_accuracy(y_batch_pred, y_batch)
 
         # time.sleep(10)
@@ -92,5 +94,5 @@ num_test_batches = test_size // config.BATCH_SIZE
 for e in range(config.NUM_EPOCHS):
     train_loss, train_acc = go_through_batches(num_batches, True)
     test_loss, test_acc = go_through_batches(num_test_batches, False)
-    print("Epoch {} | Loss: {}, Accuracy: {} | Test loss: {}, Test Accuracy: {}"
+    print("Epoch {} | Loss: {:.6f}, Accuracy: {:.6f} | Test loss: {:.6f}, Test Accuracy: {:.6f}"
             .format(e, train_loss, train_acc, test_loss, test_acc))
