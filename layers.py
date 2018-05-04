@@ -213,7 +213,9 @@ class BatchNorm:
 
     def backward(self, backproped_grad):
         d_xhat = backproped_grad * self.gamma
-        dx = (1. / len(self.input_hat)) * (len(self.input_hat) * d_xhat - np.sum(d_xhat, axis=0) - self.input_hat * np.sum(d_xhat * self.input_hat, axis=0)) / self.std
+        numerator = len(self.input_hat) * d_xhat - np.sum(d_xhat, axis=0)
+        numerator -= self.input_hat * np.sum(d_xhat * self.input_hat, axis=0)
+        dx = (1. / len(self.input_hat)) * numerator / self.std
         self.d_gamma = np.sum(backproped_grad * self.input_hat, axis=0)
         self.d_beta = np.sum(backproped_grad, axis=0)
         return dx
