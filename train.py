@@ -94,7 +94,7 @@ def model_train(model, X_train, y_train, X_val, y_val):
 
 
 def model_evaluate(model, X_test, y_test):
-    print('\nEvaluating model on {} unseen examples from training set\n'.format(len(X_test)))
+    print('\nEvaluating model on {} unseen examples from training set...'.format(len(X_test)))
     # Evaluate model using part of unseen data from the training set
     test_loss, test_acc = go_through_by_batch(model, X_test, y_test, training=False)
 
