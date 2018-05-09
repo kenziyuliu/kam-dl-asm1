@@ -134,9 +134,9 @@ def model_predict(model, X):
 
 
 def main():
-    # List of models to compare
-    models_to_test = [he_and_relu, xavier_and_lrelu] # , relu_with_sgd_model, sigmoid_model, tanh_model]
-    model_names = ['he_and_relu', 'xavier_and_lrelu'] #, 'relu_with_sgd_model', 'sigmoid_model', 'tanh_model']
+    # List of models to compare; keep 1 model only when submitting
+    models_to_test = [he_and_relu]
+    model_names = ['he_and_relu']
 
     for model, model_name in zip(models_to_test, model_names):
         print('\nTraining model: {}'.format(model_name))
